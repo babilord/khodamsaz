@@ -8,6 +8,7 @@ public class AppUser : IdentityUser
     public string DisplayName { get; set; } = "";
     public string City { get; set; } = "";
     public string Bio { get; set; } = "";
+    public string? VerifiedMobile { get; set; }
 }
 public class MarketplaceDb(DbContextOptions<MarketplaceDb> options) : IdentityDbContext<AppUser>(options)
 {
@@ -16,9 +17,18 @@ public class MarketplaceDb(DbContextOptions<MarketplaceDb> options) : IdentityDb
     public DbSet<Favorite> Favorites => Set<Favorite>();
     public DbSet<Message> Messages => Set<Message>();
     public DbSet<PurchaseDeclaration> PurchaseDeclarations => Set<PurchaseDeclaration>();
+    public DbSet<MobileOtpChallenge> MobileOtpChallenges => Set<MobileOtpChallenge>();
     protected override void OnModelCreating(ModelBuilder b)
     {
         base.OnModelCreating(b);
+        b.Entity<AppUser>().Property(x => x.VerifiedMobile).HasMaxLength(13);
+        b.Entity<AppUser>().HasIndex(x => x.VerifiedMobile).IsUnique();
+        b.Entity<MobileOtpChallenge>(challenge =>
+        {
+            challenge.HasIndex(x => new { x.PhoneKey, x.IssuedAt });
+            challenge.HasIndex(x => new { x.IpKey, x.IssuedAt });
+            challenge.HasIndex(x => x.IssuedAt);
+        });
         b.Entity<Category>().HasOne(x => x.Parent).WithMany().HasForeignKey(x => x.ParentId).OnDelete(DeleteBehavior.Restrict);
         b.Entity<Category>().Property(x => x.Name).HasMaxLength(100);
         b.Entity<Listing>().Property(x => x.Title).HasMaxLength(120);

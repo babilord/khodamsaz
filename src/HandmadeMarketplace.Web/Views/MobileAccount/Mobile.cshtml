@@ -1,0 +1,69 @@
+@using HandmadeMarketplace.Infrastructure
+@model MobileOtpPage
+@{
+    var input = Model.Input;
+    var heading = Model.Purpose switch
+    {
+        OtpPurpose.Register => "عضویت با شماره موبایل",
+        OtpPurpose.VerifyPhone => "تأیید شماره موبایل",
+        OtpPurpose.RecoverPassword => "بازیابی رمز عبور با موبایل",
+        _ => "ورود با شماره موبایل"
+    };
+    ViewData["Title"] = heading;
+}
+<section class="panel auth-panel" aria-labelledby="otp-heading">
+    <h1 class="h3" id="otp-heading">@heading</h1>
+    @if (Model.Message is not null)
+    {
+        <p role="status" class="alert alert-secondary">@Model.Message</p>
+    }
+    <form method="post" asp-action="Send" asp-route-purpose="@Model.Purpose" data-otp-form>
+        <input type="hidden" name="ReturnUrl" value="@input.ReturnUrl" />
+        <input type="hidden" name="Challenge" value="@input.Challenge" />
+        <label for="otp-phone" class="form-label">شماره موبایل</label>
+        <input id="otp-phone" class="form-control mb-3" name="Phone" value="@input.Phone" dir="ltr"
+               type="tel" autocomplete="tel" inputmode="tel" maxlength="40" required placeholder="شماره موبایل خود را وارد کنید" />
+        <button type="submit" class="btn btn-outline-primary w-100" data-otp-countdown="@Model.Cooldown">
+            @(input.Challenge == Guid.Empty ? "ارسال کد تأیید" : "ارسال مجدد کد")
+        </button>
+    </form>
+    @if (input.Challenge != Guid.Empty)
+    {
+        <form method="post" asp-action="Verify" asp-route-purpose="@Model.Purpose" class="mt-4" data-otp-form>
+            <input type="hidden" name="Phone" value="@input.Phone" />
+            <input type="hidden" name="Challenge" value="@input.Challenge" />
+            <input type="hidden" name="ReturnUrl" value="@input.ReturnUrl" />
+            <label for="otp-code" class="form-label">کد تأیید را وارد کنید</label>
+            <input id="otp-code" class="form-control mb-3" name="Code" dir="ltr" type="text"
+                   inputmode="numeric" autocomplete="one-time-code" minlength="6" maxlength="6" required />
+            @if (Model.Purpose == OtpPurpose.Register)
+            {
+                <label for="otp-name" class="form-label">نام نمایشی</label>
+                <input id="otp-name" class="form-control mb-3" name="Name" value="@input.Name" autocomplete="name" maxlength="80" required />
+                <label for="otp-city" class="form-label">شهر</label>
+                <input id="otp-city" class="form-control mb-3" name="City" value="@input.City" maxlength="80" required />
+                <label for="otp-email" class="form-label">ایمیل</label>
+                <input id="otp-email" class="form-control mb-3" name="Email" value="@input.Email" type="email"
+                       dir="ltr" autocomplete="email" maxlength="256" required />
+            }
+            @if (Model.Purpose != OtpPurpose.Login)
+            {
+                <label for="otp-password" class="form-label">@(Model.Purpose == OtpPurpose.VerifyPhone ? "رمز عبور فعلی" : "رمز عبور تازه")</label>
+                <input id="otp-password" class="form-control mb-3" name="Password" type="password" dir="ltr"
+                       autocomplete="@(Model.Purpose == OtpPurpose.VerifyPhone ? "current-password" : "new-password")" maxlength="128" required />
+            }
+            <button type="submit" class="btn btn-primary w-100">تأیید کد</button>
+        </form>
+    }
+    @if (Model.Purpose == OtpPurpose.VerifyPhone)
+    {
+        <a class="d-block mt-3" asp-controller="Account" asp-action="Profile">بازگشت به پروفایل</a>
+    }
+    else
+    {
+        <a class="d-block mt-3" asp-controller="Account" asp-action="Login">ورود با ایمیل</a>
+    }
+</section>
+@section Scripts {
+    <script src="~/js/mobile-otp.js" asp-append-version="true" defer></script>
+}

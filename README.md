@@ -56,3 +56,36 @@ Use separately configured deployment access and secrets. Before releasing, verif
 ## Codex Web
 
 Connect your GitHub account in Codex Web and grant access to this repository. Select khodamsaz and main when creating a cloud environment. Configure a .NET SDK compatible with global.json and run dotnet restore HandmadeMarketplace.sln during setup. Provision disposable PostgreSQL for DB tests and keep development-only values in the environment settings. Run the build and test commands above, review the diff, and open a pull request. After merging, use git switch main and git pull --ff-only on your computers before starting a new topic branch.
+
+## Mobile OTP and MeliPayamak
+
+Email authentication and registration remain available with SMS disabled. SMS login, phone verification, and password recovery are limited to ordinary accounts without MFA or assigned roles. Existing numbers keep their old Identity fields and only become eligible for SMS after an explicit verification. Linking a mobile to an existing account also requires the current password.
+
+| Compose variable | Host configuration | Purpose |
+| --- | --- | --- |
+| `SMS_ENABLED` | `Sms__Enabled` | Feature switch, default false |
+| `SMS_FAKE` | `Sms__Fake` | In-memory SMS sink, Development only and never a live sender |
+| `SMS_ENDPOINT` | `Sms__Endpoint` | HTTPS MeliPayamak template REST operation, defaults to BaseServiceNumber |
+| `SMS_USERNAME`, `SMS_PASSWORD`, `SMS_API_KEY` | `Sms__Username`, `Sms__Password`, `Sms__ApiKey` | Provider username and credential. The API key, when present, replaces the password in the provider's form field. |
+| `SMS_BODY_ID` | `Sms__BodyId` | Approved numeric template identifier. This operation uses the template's service number. |
+| `SMS_HASH_KEY` | `Sms__HashKey` | Base64 of 32 or more cryptographically random bytes, identical across app instances |
+| `SMS_TRUSTED_PROXY` | `Sms__TrustedProxy` | Exact address of the immediate trusted proxy that supplies the client IP |
+| `SMS_TIMEOUT_SECONDS` | `Sms__TimeoutSeconds` | Provider request timeout in seconds, 1–30 |
+| `SMS_PHONE_HOURLY`, `SMS_PHONE_DAILY` | `Sms__PhoneHourly`, `Sms__PhoneDaily` | Rolling send-request limits per phone |
+| `SMS_IP_HOURLY`, `SMS_IP_DAILY` | `Sms__IpHourly`, `Sms__IpDaily` | Rolling send-request limits per client IP |
+
+Create the template under **ابزار ویژه → وب‌سرویس خدماتی → درج متن جدید**. MeliPayamak's numbering starts at `{0}`, which is the only variable in this exact template. [Provider template instructions](https://www.melipayamak.com/blog/posts/sms-with-pattern-mode/)
+
+```text
+به خودم‌ساز خوش آمدید.
+کد: {0}
+khodamsaz.ir
+```
+
+The [official MeliPayamak .NET REST example](https://github.com/Melipayamak/melipayamak-Asp.net-Core/blob/master/RestClientAsync.cs) documents the form fields `username`, `password`, `text`, `to`, and `bodyId`. For a one-variable template, the application sends the six-digit code alone in `text`. Delivery acceptance requires REST status 1 and a receipt longer than 15 digits. Check the provider’s account requirements for an API key and allowed outbound IP. [MeliPayamak shared service documentation](https://www.melipayamak.com/api/sendbybasenumber/)
+
+After explicit approval for live activation, put the credentials, BodyId, generated hash key, and trusted proxy setting in private runtime configuration. Keep the fake switch off. Verify that the app receives the real client IP from the trusted proxy, enable SMS, and use one authorized test number to check the rendered text, sign-in, and cooldown. Disable SMS again if any of those checks fail.
+
+Local verification uses a disposable PostgreSQL database, a generated hash key, and the Development fake. The PostgreSQL improvement suite exercises the full OTP journey. Start a disposable app with `Sms__Enabled=true`, `Sms__Fake=true`, and a generated `Sms__HashKey` to run `python tests/verify_mobile_otp.py http://localhost:5180`. Do not expose a fake inbox or persist test codes to a shared log.
+
+Before a disabled production rollout, test the additive migration on a restored database and keep the previous app image. Roll back the app image if needed and leave the additive schema in place. Rolling the migration down would discard verified mobile bindings.

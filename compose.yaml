@@ -37,6 +37,20 @@ services:
       Seed__AdminPassword: ${SEED_ADMIN_PASSWORD:-}
       Seed__DemoPassword: ${SEED_DEMO_PASSWORD:-}
       Seed__DemoData: ${SEED_DEMO_DATA:-false}
+      Sms__Enabled: ${SMS_ENABLED:-false}
+      Sms__Fake: ${SMS_FAKE:-false}
+      Sms__Endpoint: ${SMS_ENDPOINT:-https://rest.payamak-panel.com/api/SendSMS/BaseServiceNumber}
+      Sms__Username: ${SMS_USERNAME:-}
+      Sms__Password: ${SMS_PASSWORD:-}
+      Sms__ApiKey: ${SMS_API_KEY:-}
+      Sms__BodyId: ${SMS_BODY_ID:-0}
+      Sms__HashKey: ${SMS_HASH_KEY:-}
+      Sms__TrustedProxy: ${SMS_TRUSTED_PROXY:-}
+      Sms__TimeoutSeconds: ${SMS_TIMEOUT_SECONDS:-12}
+      Sms__PhoneHourly: ${SMS_PHONE_HOURLY:-5}
+      Sms__PhoneDaily: ${SMS_PHONE_DAILY:-12}
+      Sms__IpHourly: ${SMS_IP_HOURLY:-20}
+      Sms__IpDaily: ${SMS_IP_DAILY:-60}
     volumes:
       - uploads:/app/wwwroot/uploads
       - data_protection_keys:/app/keys

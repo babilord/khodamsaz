@@ -10,6 +10,7 @@
 
 - Guests see approved listings. Moderation, ownership checks, favorites, and conversation privacy are enforced on the server.
 - ASP.NET Core Identity manages accounts and the Admin role. Require anti-forgery on browser writes and verify ownership independently of input. Never commit credentials or publish personal data.
+- SMS is disabled by default. Keep the fake sender development-only. Preserve distinct OTP purposes, PostgreSQL-backed quotas and one-time consumption, and the unique opted-in verified mobile binding. Existing Identity phone fields are not automatically trusted. SMS login and recovery are unavailable to elevated or MFA-enabled accounts. See README.md for SMS settings.
 - Purchase declarations are self-reported per product. A user may declare up to ten times per product across all sessions. Preserve PostgreSQL concurrency safeguards and request-ID idempotency. Owners cannot declare their own products. Public views show aggregate counts only.
 - Keep absolute canonicals on the public canonical origin. Sitemap entries must be public and indexable. Keep filtered/private pages out of the index and preserve 404s and existing redirects. Structured data must reflect actual values and must never represent self-reports as ratings, reviews, or verified purchases.
 

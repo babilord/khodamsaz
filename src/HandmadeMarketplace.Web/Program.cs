@@ -1,10 +1,13 @@
 using Microsoft.AspNetCore.DataProtection;
 using System.Globalization;
+using System.Security.Claims;
 using HandmadeMarketplace.Application;
 using HandmadeMarketplace.Infrastructure;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.HttpOverrides;
+using HandmadeMarketplace.Web.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -29,11 +32,57 @@ if (!string.IsNullOrWhiteSpace(keysPath))
         .PersistKeysToFileSystem(new DirectoryInfo(keysPath));
 builder.Services.AddIdentity<AppUser, IdentityRole>(o => { o.User.RequireUniqueEmail = true; o.Password.RequiredLength = 8; o.Lockout.MaxFailedAccessAttempts = 5; }).AddEntityFrameworkStores<MarketplaceDb>().AddDefaultTokenProviders();
 builder.Services.ConfigureApplicationCookie(o => { o.LoginPath = "/Account/Login"; o.AccessDeniedPath = "/Account/Denied"; o.Cookie.HttpOnly = true; o.Cookie.SameSite = SameSiteMode.Lax; });
+builder.Services.Configure<SecurityStampValidatorOptions>(options =>
+{
+    options.OnRefreshingPrincipal = context =>
+    {
+        // Role assignment after an SMS login must not elevate that existing session.
+        if (context.CurrentPrincipal?.FindFirstValue(ClaimTypes.AuthenticationMethod) == "sms"
+            && context.NewPrincipal?.Identity is ClaimsIdentity identity)
+        {
+            foreach (var role in identity.FindAll(identity.RoleClaimType).ToArray())
+                identity.RemoveClaim(role);
+            identity.AddClaim(new Claim(ClaimTypes.AuthenticationMethod, "sms"));
+        }
+        return Task.CompletedTask;
+    };
+});
 builder.Services.AddScoped<IMarketplace, MarketplaceService>();
 builder.Services.AddScoped<IPurchaseDeclarations, PurchaseDeclarationService>();
+var sms = builder.Configuration.GetSection("Sms").Get<SmsOptions>() ?? new SmsOptions();
+if (sms.Fake && !builder.Environment.IsDevelopment())
+    throw new InvalidOperationException("Fake SMS is development-only.");
+if (sms.Enabled && (!sms.ValidKey() || sms.PhoneHourly < 1 || sms.PhoneDaily < 1
+    || sms.IpHourly < 1 || sms.IpDaily < 1 || sms.TimeoutSeconds is < 1 or > 30
+    || !sms.Fake && (!Uri.TryCreate(sms.Endpoint, UriKind.Absolute, out var endpoint)
+        || endpoint.Scheme != "https" || endpoint.UserInfo.Length != 0 || endpoint.Query.Length != 0
+        || endpoint.Fragment.Length != 0 || sms.BodyId < 1 || string.IsNullOrWhiteSpace(sms.Username)
+        || string.IsNullOrWhiteSpace(sms.ProviderCredential))))
+    throw new InvalidOperationException("SMS settings are incomplete or invalid.");
+if (sms.Enabled && !string.IsNullOrWhiteSpace(sms.TrustedProxy))
+{
+    var proxy = System.Net.IPAddress.Parse(sms.TrustedProxy);
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor;
+        options.ForwardLimit = 1;
+        options.KnownNetworks.Clear();
+        options.KnownProxies.Clear();
+        options.KnownProxies.Add(proxy);
+    });
+}
+builder.Services.AddSingleton(sms);
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddScoped<MobileOtp>();
+if (sms.Fake) builder.Services.AddSingleton<IOtpSmsSender, DevelopmentSms>();
+else builder.Services.AddHttpClient<IOtpSmsSender, MeliPayamakSms>(http =>
+    http.Timeout = TimeSpan.FromSeconds(sms.TimeoutSeconds))
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false })
+    .RemoveAllLoggers();
 builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(o => o.MultipartBodyLengthLimit = 32 * 1024 * 1024);
 
 var app = builder.Build();
+if (sms.Enabled && !string.IsNullOrWhiteSpace(sms.TrustedProxy)) app.UseForwardedHeaders();
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.GetCultureInfo("fa-IR");
 CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.GetCultureInfo("fa-IR");
 
@@ -69,7 +118,7 @@ app.UseRouting();
 app.Use(async (context, next) =>
 {
     var action = context.GetEndpoint()?.Metadata.GetMetadata<Microsoft.AspNetCore.Mvc.Controllers.ControllerActionDescriptor>();
-    if (action is not null && (action.ControllerName is "Account" or "Admin" or "Messages" or "PurchaseDeclarations"
+    if (action is not null && (action.ControllerName is "Account" or "MobileAccount" or "Admin" or "Messages" or "PurchaseDeclarations"
         || action.ControllerName == "Listings" && action.ActionName is not ("Details" or "Maker")
         || action.ControllerName == "Home" && action.ActionName is "Privacy" or "Error"))
         context.Response.Headers["X-Robots-Tag"] = "noindex";
