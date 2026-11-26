@@ -38,6 +38,11 @@ public class ListingsController(IMarketplace market, IWebHostEnvironment environ
     }
     [Authorize, HttpPost, RequestSizeLimit(32 * 1024 * 1024)]
     public async Task<IActionResult> Edit(ListingInput input, List<IFormFile> images, int[] removeImages) {
+        if (ModelState[nameof(ListingInput.CategoryId)] is { Errors.Count: > 0 } category)
+        {
+            category.Errors.Clear();
+            ModelState.AddModelError(nameof(ListingInput.CategoryId), ListingInput.CategoryMessage);
+        }
         var existing = input.Id == 0 ? null : await market.Get(input.Id);
         var removedPaths = existing?.Images.Where(x => removeImages.Contains(x.Id)).Select(x => x.Path).ToArray() ?? [];
         if (input.Id != 0 && (existing == null || existing.MakerId != UserId)) return NotFound();

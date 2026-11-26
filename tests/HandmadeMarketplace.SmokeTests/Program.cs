@@ -29,18 +29,38 @@ var profile = await Page(seller, "/Account/Profile");
 Check((await Post(seller, "/Account/Profile", profile, ("Name", "سارا رضایی"), ("City", "اصفهان"), ("Bio", "سازنده زیورآلات و هنرهای دستی؛ سفارش اختصاصی می‌پذیرم."))).StatusCode == HttpStatusCode.Redirect, "profile update");
 var edit = await Page(seller, "/Listings/Edit");
 var category = Regex.Match(edit, "<option value=\"([1-9][0-9]*)\"").Groups[1].Value;
+const string descriptionLengthMessage = "لطفاً توضیحات محصول را بین ۱۰ تا ۴۰۰۰ کاراکتر وارد کنید.";
+async Task CheckListingError(string field, string value, string message)
+{
+    var fields = new Dictionary<string, string> {
+        ["Title"] = "محصول آزمایشی", ["Description"] = new string('ا', 20),
+        ["City"] = "تهران", ["CategoryId"] = category, ["Price"] = "۰"
+    };
+    fields[field] = value;
+    using var response = await Post(seller, "/Listings/Edit", edit, fields.Select(x => (x.Key, x.Value)).ToArray());
+    var html = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+    Check(response.StatusCode == HttpStatusCode.OK && html.Contains($"<li>{message}</li>"), $"Persian listing validation for {field}");
+}
+await CheckListingError("Description", new string('ا', 9), descriptionLengthMessage);
+await CheckListingError("Description", new string('ا', 4001), descriptionLengthMessage);
+await CheckListingError("Description", "", "لطفاً توضیحات محصول را وارد کنید.");
+await CheckListingError("Title", new string('ا', 121), "عنوان محصول نباید بیشتر از ۱۲۰ کاراکتر باشد.");
+await CheckListingError("City", new string('ا', 81), "نام شهر نباید بیشتر از ۸۰ کاراکتر باشد.");
+await CheckListingError("CategoryId", "", "لطفاً یک دسته‌بندی معتبر انتخاب کنید.");
+await CheckListingError("CategoryId", "invalid", "لطفاً یک دسته‌بندی معتبر انتخاب کنید.");
 var invalidInput = await Post(seller, "/Listings/Edit", edit, ("Title", "نامعتبر"), ("Description", "شرح کافی برای بررسی اعتبارسنجی قیمت"), ("City", "تهران"), ("Price", "-1"), ("CategoryId", category));
 Check(invalidInput.StatusCode == HttpStatusCode.OK && (await invalidInput.Content.ReadAsStringAsync()).Contains("validation-summary-errors"), "negative price rejected");
 using (var invalidFile = new MultipartFormDataContent()) {
     foreach (var field in new Dictionary<string,string> { ["__RequestVerificationToken"] = Token(edit), ["Title"] = "فایل نامعتبر", ["Description"] = "توضیح کافی برای آزمون فایل نامعتبر", ["City"] = "تهران", ["Price"] = "1000", ["CategoryId"] = category }) invalidFile.Add(new StringContent(field.Value), field.Key);
     invalidFile.Add(new ByteArrayContent(Encoding.UTF8.GetBytes("<script>alert(1)</script>")), "images", "fake.png");
     var rejected = await seller.PostAsync("/Listings/Edit", invalidFile);
-    Check(rejected.StatusCode == HttpStatusCode.OK && (await rejected.Content.ReadAsStringAsync()).Contains("validation-summary-errors"), "forged image rejected");
+    Check(rejected.StatusCode == HttpStatusCode.OK && WebUtility.HtmlDecode(await rejected.Content.ReadAsStringAsync())
+        .Contains("<li>فقط تصاویر JPEG و PNG مجازند.</li>"), "forged image rejected with Persian message");
 }
 var title = "آزمایش خودکار " + Guid.NewGuid().ToString("N")[..8];
 using var multipart = new MultipartFormDataContent();
 void Field(string key, string value) => multipart.Add(new StringContent(value), key);
-Field("__RequestVerificationToken", Token(edit)); Field("Title", title); Field("Description", "این محصول برای آزمون کامل مسیر آگهی ساخته شده است."); Field("City", "شیراز"); Field("Price", "750000"); Field("CategoryId", category); Field("Id", "0");
+Field("__RequestVerificationToken", Token(edit)); Field("Title", title); Field("Description", new string('ا', 10)); Field("City", "شیراز"); Field("Price", "750000"); Field("CategoryId", category); Field("Id", "0");
 byte[] png = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=");
 multipart.Add(new ByteArrayContent(png), "images", "first.png"); multipart.Add(new ByteArrayContent(png), "images", "second.png");
 Check((await seller.PostAsync("/Listings/Edit", multipart)).StatusCode == HttpStatusCode.Redirect, "create listing with two images");
@@ -80,7 +100,7 @@ Check((await Page(buyer, threadUrl)).Contains("با خوشحالی"), "reply vis
 Check((await admin.GetAsync(replyUrl)).StatusCode == HttpStatusCode.NotFound, "private conversation hidden from third party");
 // Edits must return an approved listing to moderation.
 edit = await Page(seller, "/Listings/Edit/" + id);
-Check((await Post(seller, "/Listings/Edit", edit, ("Id", id), ("Title", title), ("Description", "شرح ویرایش‌شده برای آزمون بازبینی مجدد آگهی."), ("City", "شیراز"), ("Price", "800000"), ("CategoryId", category))).StatusCode == HttpStatusCode.Redirect, "edit listing");
+Check((await Post(seller, "/Listings/Edit", edit, ("Id", id), ("Title", title), ("Description", new string('ا', 4000)), ("City", "شیراز"), ("Price", "800000"), ("CategoryId", category))).StatusCode == HttpStatusCode.Redirect, "edit listing accepts 4000-character description");
 Check((await guest.GetAsync("/Listings/Details/" + id)).StatusCode == HttpStatusCode.NotFound, "edited listing requires reapproval");
 dashboard = await Page(admin, "/Admin");
 await Post(admin, "/Admin/Moderate", dashboard, ("id", id), ("approve", "false"));

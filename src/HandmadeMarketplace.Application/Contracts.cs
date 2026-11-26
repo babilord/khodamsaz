@@ -24,11 +24,25 @@ public record MakerProfile(string Id, string Name, string City, string Bio);
 public class ListingInput
 {
     public int Id { get; set; }
-    [Required(ErrorMessage = "عنوان را وارد کنید"), StringLength(120)] public string Title { get; set; } = "";
-    [Required, StringLength(4000, MinimumLength = 10)] public string Description { get; set; } = "";
-    [Required, StringLength(80)] public string City { get; set; } = "";
-    [Range(0, 1000000000000)] public long Price { get; set; }
-    [Range(1, int.MaxValue)] public int CategoryId { get; set; }
+    public const string DescriptionLengthMessage = "لطفاً توضیحات محصول را بین ۱۰ تا ۴۰۰۰ کاراکتر وارد کنید.";
+    public const string PriceMessage = "قیمت باید عددی بین صفر و ۱٬۰۰۰٬۰۰۰٬۰۰۰٬۰۰۰ تومان باشد؛ برای قیمت توافقی صفر وارد کنید.";
+    public const string CategoryMessage = "لطفاً یک دسته‌بندی معتبر انتخاب کنید.";
+
+    [Required(ErrorMessage = "عنوان را وارد کنید"), StringLength(120, ErrorMessage = "عنوان محصول نباید بیشتر از ۱۲۰ کاراکتر باشد.")]
+    public string Title { get; set; } = "";
+
+    [Required(ErrorMessage = "لطفاً توضیحات محصول را وارد کنید.")]
+    [StringLength(4000, MinimumLength = 10, ErrorMessage = DescriptionLengthMessage)]
+    public string Description { get; set; } = "";
+
+    [Required(ErrorMessage = "لطفاً شهر را وارد کنید."), StringLength(80, ErrorMessage = "نام شهر نباید بیشتر از ۸۰ کاراکتر باشد.")]
+    public string City { get; set; } = "";
+
+    [Required(ErrorMessage = PriceMessage), Range(0, 1000000000000, ErrorMessage = PriceMessage)]
+    public long Price { get; set; }
+
+    [Required(ErrorMessage = CategoryMessage), Range(1, int.MaxValue, ErrorMessage = CategoryMessage)]
+    public int CategoryId { get; set; }
 }
 public interface IMarketplace
 {
