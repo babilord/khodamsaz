@@ -23,7 +23,7 @@ public sealed class PriceModelBinder : IModelBinder
             context.Result = ModelBindingResult.Success(null);
         else if (PersianPrice.TryParse(input.FirstValue, out var value) && value <= 1_000_000_000_000)
             context.Result = ModelBindingResult.Success(value);
-        else context.ModelState.TryAddModelError(context.ModelName, "قیمت باید عددی بین صفر و ۱٬۰۰۰٬۰۰۰٬۰۰۰٬۰۰۰ تومان باشد؛ برای قیمت توافقی صفر وارد کنید.");
+        else context.ModelState.TryAddModelError(context.ModelName, ListingInput.PriceMessage);
         return Task.CompletedTask;
     }
 }
