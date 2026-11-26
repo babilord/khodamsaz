@@ -1,0 +1,4 @@
+@using HandmadeMarketplace.Domain
+@model IReadOnlyList<Listing>
+@{ ViewData["Title"] = "نشان‌شده‌ها"; }
+<h1 class="h3 mb-4">نشان‌شده‌های من</h1><partial name="_ListingGrid" model="Model" />

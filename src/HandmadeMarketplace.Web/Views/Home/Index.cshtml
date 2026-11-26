@@ -1,0 +1,26 @@
+@using HandmadeMarketplace.Application
+@using HandmadeMarketplace.Domain
+@model SearchResult
+@{ ViewData["Title"] = "بازار هنر و خلاقیت"; ViewData["HasProductFilters"] = true; var search = (Search)ViewBag.Search; var categories = (IReadOnlyList<Category>)ViewBag.Categories; }
+<section class="hero mb-4"><div class="hero-copy"><div class="eyebrow">هنر ایرانی، از دل کارگاه‌ها</div><h1>@Seo.Brand</h1><h2>هر اثر، داستانی برای گفتن دارد</h2><p>از زیورآلات و شیرینی‌های خانگی تا آثار هنری و ساخته‌های خلاقانه؛ دنیای هنر و خلاقیت را کشف کن.</p><div class="d-flex flex-wrap gap-2 hero-actions"><a class="btn btn-primary" href="#marketplace">کشف آثار هنری</a><a class="btn btn-outline-primary" asp-controller="Listings" asp-action="Edit">من هم می‌سازم</a></div></div></section>
+<div class="row g-4"><aside class="col-lg-3 product-filter-sidebar">
+<div id="product-filters" class="offcanvas-lg offcanvas-start product-filters sticky-filter" tabindex="-1" aria-labelledby="product-filters-title">
+<div class="offcanvas-header"><h2 id="product-filters-title" class="offcanvas-title h5">فیلتر محصولات</h2><button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#product-filters" aria-label="بستن فیلتر محصولات"></button></div>
+<div class="offcanvas-body"><form method="get" asp-controller="Home" asp-action="Index" class="panel product-filter-form">
+<div asp-validation-summary="All" role="alert"></div><h2 class="h5 mb-3">پیدا کردن یک ساخته</h2>
+<label for="q" class="form-label">جستجو</label><input id="q" name="Q" value="@search.Q" class="form-control mb-3" placeholder="چه چیزی دوست داری؟" maxlength="120" />
+<label for="category" class="form-label">دسته‌بندی</label><select id="category" name="CategoryId" class="form-select mb-3"><option value="">همه دسته‌ها</option>@foreach (var c in categories) { <option value="@c.Id" selected="@(search.CategoryId == c.Id)">@(c.ParentId.HasValue ? "— " : "")@c.Name</option> }</select>
+<label for="city" class="form-label">شهر</label><input id="city" name="City" value="@search.City" class="form-control mb-3" placeholder="مثلاً تهران" maxlength="80" />
+<label for="min" class="form-label">قیمت از (تومان)</label><input id="min" name="Min" type="text" inputmode="numeric" data-price="true" value="@(search.Min.HasValue ? PersianPrice.Format(search.Min.Value) : "")" class="form-control mb-3" />
+<label for="max" class="form-label">قیمت تا (تومان)</label><input id="max" name="Max" type="text" inputmode="numeric" data-price="true" value="@(search.Max.HasValue ? PersianPrice.Format(search.Max.Value) : "")" class="form-control mb-3" />
+<label for="sort" class="form-label">مرتب‌سازی</label><select id="sort" name="Sort" class="form-select mb-3">
+<option value="newest" selected="@(search.Sort is null or "newest")">جدیدترین‌ها</option>
+<option value="oldest" selected="@(search.Sort == "oldest")">قدیمی‌ترین‌ها</option>
+<option value="price-asc" selected="@(search.Sort == "price-asc")">ارزان‌ترین‌ها</option>
+<option value="price-desc" selected="@(search.Sort == "price-desc")">گران‌ترین‌ها</option>
+</select><button class="btn btn-primary w-100">اعمال فیلتر</button><a class="btn btn-link w-100" asp-action="Index">پاک کردن فیلترها</a>
+</form></div></div></aside><section id="marketplace" class="col-lg-9"><div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3"><h2 class="h4">از کارگاه‌ها</h2><span class="text-muted small">@Model.Total ساخته</span></div>
+<p class="small"><a href="@Seo.QazvinPath">محصولات دست‌ساز قزوین</a></p>
+<partial name="_ListingGrid" model="Model.Items" />
+<partial name="_Pagination" model="Model" />
+</section></div>

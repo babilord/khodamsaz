@@ -1,0 +1,11 @@
+@model SearchResult
+<nav class="small mb-3" aria-label="مسیر صفحه">
+    <a asp-controller="Home" asp-action="Index">@Seo.Brand</a> /
+    <span aria-current="page">@ViewData["Title"]</span>
+</nav>
+<section aria-labelledby="catalog-title">
+    <h1 id="catalog-title" class="h3">@ViewData["Title"]</h1>
+    <p class="text-muted">@ViewData["CatalogDescription"]</p>
+    <partial name="_ListingGrid" model="Model.Items" />
+    <partial name="_Pagination" model="Model" />
+</section>

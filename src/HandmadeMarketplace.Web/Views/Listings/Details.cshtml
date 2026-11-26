@@ -1,0 +1,15 @@
+@using HandmadeMarketplace.Domain
+@using HandmadeMarketplace.Application
+@using System.Security.Claims
+@inject IPurchaseDeclarations Purchases
+@model Listing
+@{
+    ViewData["Title"] = Model.Title;
+    var maker = (MakerProfile)ViewBag.Maker;
+    var stats = await Purchases.GetStatistics([Model.Id], User.FindFirstValue(ClaimTypes.NameIdentifier), Context.RequestAborted);
+}
+<nav class="small mb-3" aria-label="مسیر صفحه"><a asp-controller="Home" asp-action="Index">@Seo.Brand</a> / <a href="@Seo.CategoryPath(Model.CategoryId)">@Model.Category.Name</a> / <span aria-current="page">@Model.Title</span></nav>
+<div class="row g-4"><section class="col-lg-8">@if (Model.Images.Count > 0) { <img class="detail-image mb-3" src="@Model.Images[0].Path" alt="@Model.Title" /><div class="d-flex flex-wrap gap-2 mb-4">@foreach (var image in Model.Images) { <a href="@image.Path" target="_blank" rel="noopener"><img src="@image.Path" class="thumb" loading="lazy" alt="نمای دیگر @Model.Title" /></a> }</div> } else { <div class="listing-placeholder rounded-4 mb-4"><span>✳</span><small>سازنده هنوز تصویری اضافه نکرده است</small></div> }<div class="panel"><h2 class="h5">درباره این ساخته</h2><p class="description mb-0">@Model.Description</p></div></section>
+<aside class="col-lg-4"><div class="panel"><span class="category-label">@Model.Category.Name</span><h1 class="h3 mt-2">@Model.Title</h1><partial name="_ListingMetadata" model="Model" /><p class="price fs-4">@(Model.Price == 0 ? "توافقی" : PersianPrice.Format(Model.Price) + " تومان")</p>@if (Model.Status != ListingStatus.Approved) { <p class="status">@UiText.Status(Model.Status)</p> }<hr /><a asp-action="Maker" asp-route-id="@maker.Id" class="d-block fw-bold">@maker.Name ←</a><p class="small text-muted">سازنده در @maker.City</p>
+@if (User.FindFirstValue(ClaimTypes.NameIdentifier) == Model.MakerId) { <a class="btn btn-primary w-100" asp-action="Edit" asp-route-id="@Model.Id">ویرایش آگهی</a> } else if (Model.Status == ListingStatus.Approved) { <a class="btn btn-primary w-100" asp-controller="Messages" asp-action="Thread" asp-route-id="@Model.Id" asp-route-other="@Model.MakerId">گفتگو با سازنده</a> }
+@if (Model.Status == ListingStatus.Approved) { <form asp-action="Favorite" method="post" class="mt-2"><input type="hidden" name="id" value="@Model.Id" /><button class="btn btn-outline-primary w-100">♡ افزودن / حذف نشان</button></form> }<partial name="_PurchaseDeclaration" model="(Model, stats.GetValueOrDefault(Model.Id) ?? new PurchaseStatistics())" /><p class="small text-muted mt-3 mb-0">جزئیات سفارش و تحویل را مستقیماً با سازنده هماهنگ کنید. پیش از پرداخت، از محصول و هویت طرف مقابل مطمئن شوید.</p></div></aside></div>

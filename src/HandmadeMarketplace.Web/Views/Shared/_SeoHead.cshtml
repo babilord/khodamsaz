@@ -1,0 +1,37 @@
+@using System.Text.Json
+@{
+    var metadata = ViewData["Seo"] as SeoPage;
+    var title = metadata?.Title ?? $"{ViewData["Title"] ?? Seo.Brand} | {Seo.Brand}";
+    var canonical = metadata?.Path is { } path ? Seo.Absolute(path) : null;
+}
+<title>@title</title>
+@if (metadata is null || !metadata.Index)
+{
+    <meta name="robots" content="noindex, follow" />
+}
+@if (canonical is not null)
+{
+    <link rel="canonical" href="@canonical" />
+}
+@if (metadata is not null)
+{
+    <meta name="description" content="@metadata.Description" />
+    @if (metadata.Index && canonical is not null)
+    {
+        <meta property="og:type" content="@metadata.Type" />
+        <meta property="og:site_name" content="@Seo.Brand" />
+        <meta property="og:locale" content="fa_IR" />
+        <meta property="og:title" content="@metadata.Title" />
+        <meta property="og:description" content="@metadata.Description" />
+        <meta property="og:url" content="@canonical" />
+        @if (metadata.Image is not null)
+        {
+            <meta property="og:image" content="@metadata.Image" />
+            <meta property="og:image:alt" content="@metadata.Title" />
+        }
+        @if (metadata.Schema is not null)
+        {
+            <script type="application/ld+json">@Html.Raw(JsonSerializer.Serialize(metadata.Schema))</script>
+        }
+    }
+}

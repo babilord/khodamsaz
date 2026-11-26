@@ -1,0 +1,6 @@
+@using HandmadeMarketplace.Domain
+@using HandmadeMarketplace.Application
+@model IReadOnlyList<Listing>
+@{ var maker = (MakerProfile)ViewBag.Maker; ViewData["Title"] = maker.Name; }
+<nav class="small mb-3" aria-label="مسیر صفحه"><a asp-controller="Home" asp-action="Index">@Seo.Brand</a> / <span aria-current="page">@maker.Name</span></nav>
+<section class="panel mb-4"><div class="eyebrow">آشنایی با سازنده</div><h1 class="h3">@maker.Name</h1><p class="text-muted">@maker.City</p><p class="description">@maker.Bio</p></section><h2 class="h4 mb-3">ساخته‌های این هنرمند</h2><partial name="_ListingGrid" model="Model" />

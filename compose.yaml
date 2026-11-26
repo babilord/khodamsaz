@@ -1,0 +1,47 @@
+name: handmade-marketplace
+services:
+  db:
+    image: postgres:17-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in .env}
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    stop_grace_period: 30s
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${APP_BIND_ADDRESS:-127.0.0.1}:${APP_PORT:-5180}:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+      Database__Host: db
+      Database__Name: ${POSTGRES_DB:?Set POSTGRES_DB in .env}
+      Database__User: ${POSTGRES_USER:?Set POSTGRES_USER in .env}
+      Database__Password: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      DataProtection__KeysPath: /app/keys
+      Seed__AdminEmail: ${SEED_ADMIN_EMAIL:-}
+      Seed__AdminPassword: ${SEED_ADMIN_PASSWORD:-}
+      Seed__DemoPassword: ${SEED_DEMO_PASSWORD:-}
+      Seed__DemoData: ${SEED_DEMO_DATA:-false}
+    volumes:
+      - uploads:/app/wwwroot/uploads
+      - data_protection_keys:/app/keys
+    stop_grace_period: 30s
+volumes:
+  postgres_data:
+  uploads:
+  data_protection_keys:

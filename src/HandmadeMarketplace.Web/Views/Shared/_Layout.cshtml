@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+    <partial name="_SeoHead" />
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.rtl.min.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+<header class="site-header"><nav class="container navbar navbar-expand-lg gap-3">
+    <a class="brand home-link" asp-controller="Home" asp-action="Index" aria-label="خانه"><svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-8H9v8H4a1 1 0 0 1-1-1Z" /></svg><span>خانه</span></a>
+    <span class="d-none d-md-inline text-muted small">از دست‌های خلاق، برای زندگی شما</span>
+    <button class="navbar-toggler ms-auto" type="button" data-bs-toggle="collapse" data-bs-target="#navigation" aria-controls="navigation" aria-expanded="false" aria-label="منوی اصلی">☰</button>
+    <div id="navigation" class="collapse navbar-collapse"><div class="navbar-nav ms-auto align-items-lg-center gap-2">
+    @if (ViewData["HasProductFilters"] is true) {
+        <button type="button" class="nav-link mobile-filter-trigger d-lg-none" data-bs-toggle="offcanvas" data-bs-target="#product-filters" aria-controls="product-filters">فیلتر محصولات</button>
+    }
+    @if (User.Identity?.IsAuthenticated == true) {
+        <a class="nav-link" asp-controller="Messages" asp-action="Index">پیام‌ها <span id="unread-badge" class="unread-badge" data-url="@Url.Action("UnreadCount", "Messages")" role="status" hidden></span></a>
+        <a class="nav-link" asp-controller="Listings" asp-action="Favorites">نشان‌شده‌ها</a>
+        <a class="nav-link" asp-controller="Listings" asp-action="Mine">آگهی‌های من</a>
+        <a class="nav-link" asp-controller="Account" asp-action="Profile">پروفایل</a>
+        @if (User.IsInRole("Admin")) { <a class="nav-link" asp-controller="Admin" asp-action="Index">مدیریت</a> }
+        <form id="logout-form" asp-controller="Account" asp-action="Logout" method="post"><button type="button" data-bs-toggle="modal" data-bs-target="#logout-modal" class="btn btn-link text-muted">خروج</button></form>
+    } else { <a class="nav-link" asp-controller="Account" asp-action="Login">ورود / عضویت</a> }
+    <a class="btn btn-primary" asp-controller="Listings" asp-action="Edit">＋ ثبت آگهی</a>
+    </div></div>
+</nav></header>
+<main class="container py-4">
+    @if (TempData["Success"] is string success) { <div class="alert alert-success" role="status">@success</div> }
+    @if (TempData["Error"] is string error) { <div class="alert alert-danger" role="alert">@error</div> }
+    @RenderBody()
+</main>
+<footer class="container py-4 mt-5 border-top text-muted small d-flex flex-wrap justify-content-between gap-2"><span>@Seo.Brand؛ بازار آدم‌های خلاق</span><span>ارتباط مستقیم با سازنده · قیمت‌ها به تومان</span><a asp-controller="Home" asp-action="Privacy">حریم خصوصی</a></footer>
+<div class="modal fade" id="logout-modal" tabindex="-1" aria-labelledby="logout-title" aria-describedby="logout-description" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h2 id="logout-title" class="modal-title h5">خروج از حساب کاربری</h2></div><div id="logout-description" class="modal-body">آیا مطمئن هستید که می‌خواهید از حساب کاربری خود خارج شوید؟</div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">انصراف</button><button type="submit" form="logout-form" class="btn btn-primary">بله، خارج می‌شوم</button></div></div></div></div>
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js" asp-append-version="true"></script>
+<script src="~/js/site.js" asp-append-version="true"></script>
+@if (User.Identity?.IsAuthenticated == true)
+{
+    <partial name="_PurchaseDeclarationDialog" />
+    <script src="~/js/purchase-declarations.js" asp-append-version="true"></script>
+}
+@await RenderSectionAsync("Scripts", required: false)
+</body></html>

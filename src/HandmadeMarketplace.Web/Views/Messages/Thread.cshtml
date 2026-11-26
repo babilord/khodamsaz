@@ -1,0 +1,10 @@
+@using HandmadeMarketplace.Domain
+@using HandmadeMarketplace.Application
+@using System.Security.Claims
+@model IReadOnlyList<Message>
+@{ var listing = (Listing)ViewBag.Listing; var other = (MakerProfile)ViewBag.Other; ViewData["Title"] = "گفتگو با " + other.Name; var userId = User.FindFirstValue(ClaimTypes.NameIdentifier); }
+<div class="panel mx-auto" style="max-width:850px"><h1 class="h4">گفتگو با @other.Name</h1><a asp-controller="Listings" asp-action="Details" asp-route-id="@listing.Id">@listing.Title</a><hr />
+@if (Model.Count == 0) { <p class="text-muted">اولین پیام را برای سازنده بنویس.</p> }
+@foreach (var message in Model) { <div class="message @(message.SenderId == userId ? "mine" : "")"><div class="small fw-bold">@(message.SenderId == userId ? "شما" : other.Name)</div>@message.Body<div class="small text-muted">@message.SentAt.ToLocalTime().ToString("yyyy/MM/dd HH:mm")</div></div> }
+<form id="read-messages" asp-action="Read" method="post" hidden><input name="id" value="@listing.Id" /><input name="other" value="@other.Id" /><input name="throughId" value="@(Model.Count == 0 ? 0 : Model.Max(x => x.Id))" /></form>
+<form asp-action="Send" method="post" class="border-top pt-3"><input type="hidden" name="id" value="@listing.Id" /><input type="hidden" name="other" value="@other.Id" /><label for="body" class="form-label">پیام شما</label><textarea id="body" name="body" class="form-control mb-3" rows="3" required maxlength="2000" placeholder="سلام، این محصول هنوز موجوده؟"></textarea><button class="btn btn-primary">ارسال پیام</button><a class="btn btn-link" asp-action="Index">همه گفتگوها</a></form></div>

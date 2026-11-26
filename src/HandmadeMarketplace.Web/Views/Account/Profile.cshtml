@@ -1,0 +1,3 @@
+@model ProfileInput
+@{ ViewData["Title"] = "پروفایل من"; }
+<div class="panel auth-panel"><h1 class="h3">پروفایل من</h1><form method="post"><div asp-validation-summary="All"></div><label asp-for="Name" class="form-label">نام نمایشی</label><input asp-for="Name" class="form-control mb-3" /><label asp-for="City" class="form-label">شهر</label><input asp-for="City" class="form-control mb-3" /><label asp-for="Bio" class="form-label">درباره کار و هنر شما</label><textarea asp-for="Bio" rows="5" class="form-control mb-3"></textarea><button class="btn btn-primary">ذخیره تغییرات</button></form></div>

@@ -1,0 +1,27 @@
+@using HandmadeMarketplace.Application
+@model SearchResult
+@{
+    var search = (Search)ViewBag.Search;
+    var catalogPath = ViewData["CatalogPath"] as string;
+    string PageUrl(int page) => catalogPath is not null
+        ? Seo.PagePath(catalogPath, page)
+        : ViewData["Seo"] is SeoPage { Index: true }
+            ? Seo.PagePath("/", page)
+            : Url.Action("Index", "Home", new { search.Q, search.CategoryId, search.City, search.Min, search.Max, search.Sort, Page = page })!;
+}
+@if (Model.TotalPages > 1)
+{
+    <nav class="pagination-nav mt-4" aria-label="صفحه‌بندی محصولات">
+        <p class="text-muted text-center">صفحه @Model.Page از @Model.TotalPages · @Model.Total ساخته</p>
+        <ul class="pagination-list">
+            <li>@if (Model.Page > 1) { <a href="@PageUrl(Model.Page - 1)" rel="prev" class="page-button">قبلی</a> } else { <span class="page-button disabled" aria-disabled="true">قبلی</span> }</li>
+            @foreach (var number in Model.PageNumbers())
+            {
+                <li>@if (number is null) { <span class="page-ellipsis" aria-label="صفحات دیگر">…</span> }
+                else if (number == Model.Page) { <span class="page-button current" aria-current="page" aria-label="صفحه @number">@number</span> }
+                else { <a class="page-button" href="@PageUrl(number.Value)" aria-label="صفحه @number">@number</a> }</li>
+            }
+            <li>@if (Model.Page < Model.TotalPages) { <a href="@PageUrl(Model.Page + 1)" rel="next" class="page-button">بعدی</a> } else { <span class="page-button disabled" aria-disabled="true">بعدی</span> }</li>
+        </ul>
+    </nav>
+}

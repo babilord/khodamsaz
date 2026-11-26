@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="..\HandmadeMarketplace.Application\HandmadeMarketplace.Application.csproj" />
+    <ProjectReference Include="..\HandmadeMarketplace.Infrastructure\HandmadeMarketplace.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.10" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>6e3e8611-6e95-49cc-bdba-ebb3a33a0506</UserSecretsId>
+  </PropertyGroup>
+
+</Project>

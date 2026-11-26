@@ -1,0 +1,38 @@
+@using System.Security.Claims
+@using HandmadeMarketplace.Domain
+@inject IPurchaseDeclarations Purchases
+@model IReadOnlyList<Listing>
+@{
+    var stats = await Purchases.GetStatistics(Model.Select(item => item.Id).ToArray(),
+        User.FindFirstValue(ClaimTypes.NameIdentifier), Context.RequestAborted);
+}
+@if (Model.Count == 0)
+{
+    <div class="empty-state"><h3 class="h5">هنوز چیزی اینجا نیست</h3><p>فیلترها را تغییر بده یا اولین ساخته‌ات را ثبت کن.</p></div>
+}
+<div class="row g-3 listing-grid">
+    @foreach (var item in Model)
+    {
+        <div class="col-6 col-xl-4">
+            <article class="listing-card">
+                <a asp-controller="Listings" asp-action="Details" asp-route-id="@item.Id" aria-label="@item.Title">
+                    @if (item.Images.Count > 0)
+                    {
+                        <img class="listing-image" src="@item.Images[0].Path" alt="@item.Title" loading="lazy" />
+                    }
+                    else
+                    {
+                        <div class="listing-placeholder" aria-label="بدون تصویر"><span>✳</span><small>@item.Category.Name</small></div>
+                    }
+                </a>
+                <div class="p-3">
+                    <a class="category-label" href="@Seo.CategoryPath(item.CategoryId)">@item.Category.Name</a>
+                    <h3 class="h6 mt-2"><a asp-controller="Listings" asp-action="Details" asp-route-id="@item.Id">@item.Title</a></h3>
+                    <p class="price">@(item.Price == 0 ? "توافقی" : PersianPrice.Format(item.Price) + " تومان")</p>
+                    <partial name="_ListingMetadata" model="item" />
+                    <partial name="_PurchaseDeclaration" model="(item, stats.GetValueOrDefault(item.Id) ?? new PurchaseStatistics())" />
+                </div>
+            </article>
+        </div>
+    }
+</div>

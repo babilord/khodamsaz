@@ -1,0 +1,9 @@
+@using System.Globalization
+@model HandmadeMarketplace.Domain.Listing
+@{
+    var date = UiText.ListingDate(Model.CreatedAt);
+}
+<div class="listing-metadata text-muted small">
+    <div>شهر: <bdi>@Model.City</bdi></div>
+    <div>تاریخ ثبت آگهی: <time datetime="@date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)" dir="ltr" class="text-nowrap">@UiText.JalaliDate(date)</time></div>
+</div>

@@ -1,0 +1,31 @@
+@using System.Security.Claims
+@using HandmadeMarketplace.Domain
+@using HandmadeMarketplace.Web.Controllers
+@model (Listing Product, PurchaseStatistics Statistics)
+@{
+    var product = Model.Product;
+    var stats = Model.Statistics;
+    var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+    var remaining = PurchaseDeclaration.Limit - stats.PersonalCount;
+    var eligible = product.Status == ListingStatus.Approved && userId != product.MakerId;
+    var detailsUrl = Url.Action("Details", "Listings", new { id = product.Id });
+    var loginUrl = Url.Action("Login", "Account", new { returnUrl = detailsUrl });
+}
+<div class="purchase-declaration mt-3" data-purchase-product="@product.Id">
+    <p class="small mb-2" data-purchase-stats aria-live="polite">@PersianPrice.Format(stats.UniqueBuyers) نفر، @PersianPrice.Format(stats.Total) بار خرید این محصول را اعلام کرده‌اند.</p>
+    @if (eligible && userId is null)
+    {
+        <a class="btn btn-outline-primary w-100" href="@loginUrl">من این محصول را خریدم</a>
+    }
+    else if (eligible)
+    {
+        <form asp-controller="PurchaseDeclarations" asp-action="Create" method="post" data-purchase-form data-login-url="@loginUrl">
+            <input type="hidden" name="productId" value="@product.Id" />
+            <button type="button" class="btn btn-outline-primary w-100" data-purchase-open disabled="@(remaining == 0)">من این محصول را خریدم</button>
+        </form>
+        <p class="small text-muted mt-1 mb-0" data-purchase-allowance>@(remaining == 0
+            ? PurchaseDeclarationsController.LimitMessage
+            : $"{PersianPrice.Format(remaining)} بار امکان ثبت خرید دارید.")</p>
+        <p class="small text-success mt-1 mb-0" data-purchase-success role="status" hidden></p>
+    }
+</div>

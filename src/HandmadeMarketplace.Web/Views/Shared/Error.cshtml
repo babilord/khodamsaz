@@ -1,0 +1,3 @@
+@model ErrorViewModel
+@{ ViewData["Title"] = "خطا"; }
+<div class="empty-state"><h1 class="h3">مشکلی در پردازش درخواست پیش آمد.</h1><p>کمی بعد دوباره تلاش کنید.</p>@if (Model.ShowRequestId) { <p class="small">شناسه پیگیری: <code>@Model.RequestId</code></p> }<a asp-controller="Home" asp-action="Index">بازگشت به بازار</a></div>
