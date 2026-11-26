@@ -48,7 +48,13 @@ var builder = new Npgsql.NpgsqlConnectionStringBuilder(connection) { Database = 
 await using var db = new MarketplaceDb(new DbContextOptionsBuilder<MarketplaceDb>().UseNpgsql(builder.ConnectionString).Options);
 try {
     await db.GetService<IMigrator>().MigrateAsync("20261025173948_InitialPostgreSql");
-    db.Users.AddRange(new AppUser { Id = "maker", UserName = "maker" }, new AppUser { Id = "buyer", UserName = "buyer" }, new AppUser { Id = "third", UserName = "third" });
+    await db.Database.ExecuteSqlRawAsync("""
+        INSERT INTO "AspNetUsers" ("Id", "UserName", "DisplayName", "City", "Bio", "PhoneNumber",
+            "EmailConfirmed", "PhoneNumberConfirmed", "TwoFactorEnabled", "LockoutEnabled", "AccessFailedCount")
+        VALUES ('maker', 'maker', '', '', '', '09123456789', FALSE, FALSE, FALSE, FALSE, 0),
+               ('buyer', 'buyer', '', '', '', '+989123456789', FALSE, FALSE, FALSE, FALSE, 0),
+               ('third', 'third', '', '', '', NULL, FALSE, FALSE, FALSE, FALSE, 0)
+        """);
     var category = new Category { Name = "Test" }; db.Categories.Add(category);
     var listing = new Listing { Title = "Test", MakerId = "maker", Category = category, Status = ListingStatus.Approved };
     var second = new Listing { Title = "Other", MakerId = "maker", Category = category, Status = ListingStatus.Approved };
@@ -56,6 +62,8 @@ try {
     // Insert a pre-upgrade row without referring to the not-yet-created IsRead column.
     await db.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO \"Messages\" (\"ListingId\", \"SenderId\", \"RecipientId\", \"Body\", \"SentAt\") VALUES ({listing.Id}, {"buyer"}, {"maker"}, {"existing message"}, {DateTime.UtcNow})");
     await db.Database.MigrateAsync();
+    Check(await db.Users.CountAsync(x => x.PhoneNumber != null && !x.PhoneNumberConfirmed && x.VerifiedMobile == null) == 2,
+        "migration preserves duplicate legacy phones without verifying them");
     var preserved = await db.Messages.SingleAsync();
     Check(preserved.Body == "existing message" && preserved.SenderId == "buyer" && preserved.RecipientId == "maker" && preserved.ListingId == listing.Id, "migration preserves existing message content and relationships");
     Check(!preserved.IsRead, "migration initializes existing messages as unread");
@@ -97,5 +105,6 @@ try {
     Check(aged.Outcome == PurchaseOutcome.LimitReached, "purchase limit includes declarations from five years ago");
     Check((await purchases.Declare(second.Id, "buyer", Guid.NewGuid(), default)).Outcome ==
         PurchaseOutcome.Recorded, "purchase limit is independent for another product by the same seller");
+    await MobileOtpChecks.Run(builder.ConnectionString, Check);
     Console.WriteLine($"All {checks} checks passed.");
 } finally { await db.Database.EnsureDeletedAsync(); }

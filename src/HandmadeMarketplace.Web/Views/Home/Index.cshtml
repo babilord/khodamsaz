@@ -2,7 +2,12 @@
 @using HandmadeMarketplace.Domain
 @model SearchResult
 @{ ViewData["Title"] = "بازار هنر و خلاقیت"; ViewData["HasProductFilters"] = true; var search = (Search)ViewBag.Search; var categories = (IReadOnlyList<Category>)ViewBag.Categories; }
-<section class="hero mb-4"><div class="hero-copy"><div class="eyebrow">هنر ایرانی، از دل کارگاه‌ها</div><h1>@Seo.Brand</h1><h2>هر اثر، داستانی برای گفتن دارد</h2><p>از زیورآلات و شیرینی‌های خانگی تا آثار هنری و ساخته‌های خلاقانه؛ دنیای هنر و خلاقیت را کشف کن.</p><div class="d-flex flex-wrap gap-2 hero-actions"><a class="btn btn-primary" href="#marketplace">کشف آثار هنری</a><a class="btn btn-outline-primary" asp-controller="Listings" asp-action="Edit">من هم می‌سازم</a></div></div></section>
+<section class="hero mb-4"><div class="hero-copy"><div class="eyebrow">هنر ایرانی، از دل کارگاه‌ها</div><h1>@Seo.Brand</h1><h2>هر اثر، داستانی برای گفتن دارد</h2><p>از زیورآلات و شیرینی‌های خانگی تا آثار هنری و ساخته‌های خلاقانه؛ دنیای هنر و خلاقیت را کشف کن.</p><div class="d-flex flex-wrap gap-2 hero-actions"><a class="btn btn-primary" href="#marketplace">کشف آثار هنری</a><a class="btn btn-outline-primary" asp-controller="Listings" asp-action="Edit">من هم می‌سازم</a></div></div>
+@if (ViewData["HomeArtwork"] is string artwork)
+{
+    <div class="hero-artwork"><img src="@artwork" asp-append-version="true" width="1536" height="1024" fetchpriority="high" alt="حروف هنری QAZVIN با نقش کاشی، فرش و معماری ایرانی" /></div>
+}
+</section>
 <div class="row g-4"><aside class="col-lg-3 product-filter-sidebar">
 <div id="product-filters" class="offcanvas-lg offcanvas-start product-filters sticky-filter" tabindex="-1" aria-labelledby="product-filters-title">
 <div class="offcanvas-header"><h2 id="product-filters-title" class="offcanvas-title h5">فیلتر محصولات</h2><button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#product-filters" aria-label="بستن فیلتر محصولات"></button></div>

@@ -14,14 +14,19 @@ public class HomeController : Controller
         _logger = logger;
     }
 
-    public async Task<IActionResult> Index([FromServices] IMarketplace marketplace, [FromQuery] Search search)
+    public async Task<IActionResult> Index([FromServices] IMarketplace marketplace,
+        [FromServices] IWebHostEnvironment hosting, [FromQuery] Search search)
     {
         ViewBag.Categories = await marketplace.Categories();
         ViewBag.Search = search;
+        // Installations can supply privately managed artwork without checking it into source.
+        const string artwork = "/images/qazvin.jpg";
+        var hasArtwork = hosting.WebRootFileProvider.GetFileInfo(artwork).Exists;
+        if (hasArtwork) ViewData["HomeArtwork"] = artwork;
         var result = await marketplace.Search(search);
         var clean = Seo.CleanQuery(Request.Query, search.Page) && search.Page == result.Page && ModelState.IsValid;
         ViewData["Seo"] = new SeoPage(Seo.PageTitle(Seo.HomeTitle, result.Page), Seo.HomeDescription,
-            clean ? Seo.PagePath("/", result.Page) : null, clean,
+            clean ? Seo.PagePath("/", result.Page) : null, clean, hasArtwork ? Seo.Absolute(artwork) : null,
             Schema: clean && result.Page == 1 ? Seo.HomeSchema() : null);
         return View(result);
     }
