@@ -1,0 +1,31 @@
+@model NewMobileProfile
+@{ ViewData["Title"] = "تکمیل عضویت"; }
+<section class="panel access-card" dir="rtl">
+    <a class="access-brand" asp-controller="Home" asp-action="Index">خودم‌ساز</a>
+    <h1>به خودم‌ساز خوش آمدید!</h1>
+    <p>برای تکمیل عضویت، اطلاعات زیر را وارد کنید.</p>
+    <form asp-action="Complete" method="post" data-access-form>
+        <div asp-validation-summary="ModelOnly" role="alert"></div>
+        <label for="verified-mobile" class="form-label">شماره موبایل تأییدشده</label>
+        <input id="verified-mobile" class="form-control" value="@ViewData["VerifiedPhone"]" dir="ltr" readonly />
+        <label asp-for="Name" class="form-label">نام نمایشی</label>
+        <input asp-for="Name" class="form-control" autocomplete="nickname" required />
+        <span asp-validation-for="Name"></span>
+        <label asp-for="City" class="form-label">شهر (اختیاری)</label>
+        <input asp-for="City" class="form-control" autocomplete="address-level2" />
+        <span asp-validation-for="City"></span>
+        <label asp-for="Email" class="form-label">ایمیل (اختیاری)</label>
+        <input asp-for="Email" class="form-control" type="email" dir="ltr" autocomplete="email" />
+        <span asp-validation-for="Email"></span>
+        <label for="new-access-password" class="form-label">رمز عبور (اختیاری)</label>
+        <input id="new-access-password" name="Password" class="form-control" type="password" dir="ltr" autocomplete="new-password" />
+        <span asp-validation-for="Password"></span>
+        <div data-password-confirmation>
+            <label asp-for="Confirmation" class="form-label">تکرار رمز عبور</label>
+            <input id="Confirmation" name="Confirmation" class="form-control" type="password" dir="ltr" autocomplete="new-password" />
+            <span asp-validation-for="Confirmation"></span>
+        </div>
+        <button class="btn btn-primary w-100 access-action" type="submit" data-busy="در حال تکمیل عضویت…">تکمیل عضویت و ورود</button>
+    </form>
+</section>
+<script src="~/js/access.js" asp-append-version="true" defer></script>

@@ -56,3 +56,24 @@ textarea.form-control{min-height:140px}.btn{line-height:1.75}.btn-sm{font-size:.
 }
 @media(max-width:339.98px){.hero{padding:.85rem}.hero-actions{gap:.4rem!important}.hero-actions .btn{font-size:.8rem}.hero-copy h1{font-size:1.6rem}}
 .listing-card .purchase-declaration .btn{font-size:.875rem;padding:.4rem .5rem;white-space:normal}
+
+/* Unified account access */
+.access-card{width:100%;max-width:27rem;margin:clamp(.25rem,4vw,2.5rem) auto;padding:clamp(1rem,4vw,2rem);box-shadow:0 12px 32px #253f3910}
+.access-card h1{font-size:clamp(1.2rem,4.8vw,1.55rem);margin:.45rem 0 .4rem}
+.access-card p{margin:0 0 .85rem;color:#51635b}
+.access-brand{font-size:1.4rem;font-weight:800;color:var(--accent)}
+.access-card .form-label{display:block;margin:.75rem 0 .25rem;font-weight:600}
+.access-card .form-control{min-height:46px;font-size:1rem}
+.access-card .access-action{margin-top:1rem;min-height:48px}
+.access-card .access-link{display:flex;align-items:center;justify-content:center;min-height:44px;margin-top:.3rem;font-size:.88rem;font-weight:600;color:var(--accent)}
+.access-card .access-error{margin:.55rem 0 0;color:#a12434;font-size:.88rem}
+.access-card .access-destination{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.2rem .5rem}
+.access-destination .access-link{margin:0}
+.access-code{position:relative}
+.access-cells{display:none}
+.access-code.enhanced .access-cells{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:clamp(.25rem,1.5vw,.5rem);pointer-events:none}
+.access-cells span{display:grid;place-items:center;min-height:48px;border:1px solid #c4d0c5;border-radius:.55rem;font-size:1.25rem;font-weight:700}
+.access-code.enhanced input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:text}
+.access-code:focus-within .access-cells .active{outline:2px solid var(--accent);outline-offset:1px}
+.access-card [data-resend]:disabled{opacity:1;color:#596760}
+.access-card .btn-primary:disabled{background:#dce7df;border-color:#dce7df;color:#3f584b;opacity:1}

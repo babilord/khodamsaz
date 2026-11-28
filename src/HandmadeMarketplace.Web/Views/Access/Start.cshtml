@@ -1,0 +1,29 @@
+@model AccessPage
+@{ ViewData["Title"] = "ورود یا ثبت‌نام"; }
+<section class="panel access-card" dir="rtl">
+    <a class="access-brand" asp-controller="Home" asp-action="Index">خودم‌ساز</a>
+    <h1>ورود یا ثبت‌نام</h1>
+    @if (Model.SmsAvailable)
+    {
+        <p>برای شروع، شماره موبایل خود را وارد کنید.</p>
+        <form asp-action="Send" method="post" data-access-form>
+            <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+            <label for="access-phone" class="form-label">شماره موبایل</label>
+            <input id="access-phone" name="phone" type="tel" inputmode="numeric" autocomplete="tel"
+                   dir="ltr" class="form-control" placeholder="۰۹xxxxxxxxx" maxlength="24"
+                   value="@Model.Phone" required />
+            @if (Model.Error is not null) { <p role="alert" class="access-error">@Model.Error</p> }
+            <button class="btn btn-primary w-100 access-action" type="submit" data-busy="در حال ارسال…">دریافت کد تأیید</button>
+        </form>
+    }
+    else
+    {
+        <p>سرویس پیامکی موقتاً در دسترس نیست.</p>
+    }
+    <a class="access-link" asp-controller="Account" asp-action="Login" asp-route-returnUrl="@Model.ReturnUrl">ورود با ایمیل و رمز عبور</a>
+    @if (!Model.SmsAvailable)
+    {
+        <a class="access-link" asp-controller="Account" asp-action="Register">ثبت‌نام با ایمیل</a>
+    }
+</section>
+<script src="~/js/access.js" asp-append-version="true" defer></script>

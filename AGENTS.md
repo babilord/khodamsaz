@@ -25,3 +25,4 @@
 - Treat production SSH and database access as separately configured and explicitly authorized. Use private secret storage and keep access details out of this repository.
 - Verify backups of database, uploads, keys, and release configuration before an authorized deployment. Keep the previous app image and preserve all Compose volumes. Avoid destructive migration, reseeding, and volume recreation.
 - Verify HTTPS, redirects, startup logs, and user-facing behavior after a release. Document any compatibility limits before rolling back.
+- Unified account entry verifies the mobile number before resolving account existence. Keep registration state short-lived and protected, preserve the verified-mobile unique index, and allow nullable Identity email and password for verified mobile accounts.

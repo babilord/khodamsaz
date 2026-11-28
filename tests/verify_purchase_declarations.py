@@ -51,7 +51,7 @@ async def main():
         login_url = await anonymous_link.get_attribute("href")
         assert path in login_url or "%2FListings%2FDetails%2F1" in login_url
         anonymous_post = await buyer.request.post(ENDPOINT, form={"productId": product}, max_redirects=0)
-        assert anonymous_post.status == 302 and "/Account/Login" in anonymous_post.headers["location"]
+        assert anonymous_post.status == 302 and "/account/access" in anonymous_post.headers["location"].lower()
         await login(buyer, "ali@handmade.local", login_url)
         assert buyer.url == ROOT + path
 
