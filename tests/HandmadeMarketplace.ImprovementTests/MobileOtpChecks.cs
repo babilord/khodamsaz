@@ -206,7 +206,7 @@ internal static class MobileOtpChecks
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
         {
             var body = await request.Content!.ReadAsStringAsync(ct);
-            if (!body.Contains("text=123456") || !body.Contains("to=09123456789")
+            if (!body.Split('&').Contains("text=123456") || !body.Contains("to=09123456789")
                 || !request.RequestUri!.AbsolutePath.EndsWith("/BaseServiceNumber"))
                 throw new InvalidOperationException("Unexpected template REST request.");
             return new HttpResponseMessage(HttpStatusCode.OK)
