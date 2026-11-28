@@ -30,8 +30,8 @@ var keysPath = builder.Configuration["DataProtection:KeysPath"];
 if (!string.IsNullOrWhiteSpace(keysPath))
     builder.Services.AddDataProtection().SetApplicationName("HandmadeMarketplace")
         .PersistKeysToFileSystem(new DirectoryInfo(keysPath));
-builder.Services.AddIdentity<AppUser, IdentityRole>(o => { o.User.RequireUniqueEmail = true; o.Password.RequiredLength = 8; o.Lockout.MaxFailedAccessAttempts = 5; }).AddEntityFrameworkStores<MarketplaceDb>().AddDefaultTokenProviders();
-builder.Services.ConfigureApplicationCookie(o => { o.LoginPath = "/Account/Login"; o.AccessDeniedPath = "/Account/Denied"; o.Cookie.HttpOnly = true; o.Cookie.SameSite = SameSiteMode.Lax; });
+builder.Services.AddIdentity<AppUser, IdentityRole>(o => { o.Password.RequiredLength = 8; o.Lockout.MaxFailedAccessAttempts = 5; }).AddEntityFrameworkStores<MarketplaceDb>().AddDefaultTokenProviders().AddUserValidator<OptionalEmailValidator>();
+builder.Services.ConfigureApplicationCookie(o => { o.LoginPath = "/account/access"; o.AccessDeniedPath = "/Account/Denied"; o.Cookie.HttpOnly = true; o.Cookie.SameSite = SameSiteMode.Lax; });
 builder.Services.Configure<SecurityStampValidatorOptions>(options =>
 {
     options.OnRefreshingPrincipal = context =>
@@ -118,7 +118,7 @@ app.UseRouting();
 app.Use(async (context, next) =>
 {
     var action = context.GetEndpoint()?.Metadata.GetMetadata<Microsoft.AspNetCore.Mvc.Controllers.ControllerActionDescriptor>();
-    if (action is not null && (action.ControllerName is "Account" or "MobileAccount" or "Admin" or "Messages" or "PurchaseDeclarations"
+    if (action is not null && (action.ControllerName is "Account" or "Access" or "MobileAccount" or "Admin" or "Messages" or "PurchaseDeclarations"
         || action.ControllerName == "Listings" && action.ActionName is not ("Details" or "Maker")
         || action.ControllerName == "Home" && action.ActionName is "Privacy" or "Error"))
         context.Response.Headers["X-Robots-Tag"] = "noindex";

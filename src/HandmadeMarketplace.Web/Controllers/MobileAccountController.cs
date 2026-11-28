@@ -24,6 +24,8 @@ public sealed class MobileAccountController(SmsOptions settings, MobileOtp otp, 
     {
         if (!Available(purpose)) return NotFound();
         if (purpose == OtpPurpose.VerifyPhone && User.Identity?.IsAuthenticated != true) return Challenge();
+        if (purpose is OtpPurpose.Login or OtpPurpose.Register)
+            return RedirectToAction("Start", "Access", new { returnUrl });
         return Form(purpose, new() { ReturnUrl = returnUrl });
     }
 
@@ -38,7 +40,7 @@ public sealed class MobileAccountController(SmsOptions settings, MobileOtp otp, 
         var started = Stopwatch.GetTimestamp();
         var subject = await ResolveSubject(purpose, phone);
         var binding = await GetBinding(purpose, phone, subject);
-        var result = await otp.Issue(phone, ClientAddress(), purpose, binding, ct);
+        var result = await otp.Issue(phone, ClientAddress(HttpContext), purpose, binding, ct);
         input.Phone = phone;
         if (result.Status == OtpIssue.Wait)
             return Form(purpose, input, "لطفاً برای ارسال مجدد کد کمی صبر کنید.", 60);
@@ -121,7 +123,7 @@ public sealed class MobileAccountController(SmsOptions settings, MobileOtp otp, 
         return Url.IsLocalUrl(input.ReturnUrl) ? LocalRedirect(input.ReturnUrl) : RedirectToAction("Index", "Home");
     }
 
-    private bool Available(OtpPurpose purpose) => settings.Enabled && ModelState.IsValid && Enum.IsDefined(purpose);
+    private bool Available(OtpPurpose purpose) => settings.Enabled && ModelState.IsValid && Enum.IsDefined(purpose) && purpose != OtpPurpose.Access;
 
     private async Task<AppUser?> ResolveSubject(OtpPurpose purpose, string phone) => purpose switch
     {
@@ -140,15 +142,17 @@ public sealed class MobileAccountController(SmsOptions settings, MobileOtp otp, 
     }
 
     // Passwordless login and reset cannot replace MFA or the existing elevated-account flow.
-    private async Task<bool> Eligible(AppUser? subject) => subject is not null
+    private Task<bool> Eligible(AppUser? subject) => Eligible(users, signIn, subject);
+
+    internal static async Task<bool> Eligible(UserManager<AppUser> users, SignInManager<AppUser> signIn, AppUser? subject) => subject is not null
         && await signIn.CanSignInAsync(subject)
         && !await users.IsLockedOutAsync(subject)
         && !await users.GetTwoFactorEnabledAsync(subject)
         && (await users.GetRolesAsync(subject)).Count == 0;
 
-    private string ClientAddress()
+    internal static string ClientAddress(HttpContext context)
     {
-        var address = HttpContext.Connection.RemoteIpAddress;
+        var address = context.Connection.RemoteIpAddress;
         if (address?.IsIPv4MappedToIPv6 == true) address = address.MapToIPv4();
         if (address?.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6)
         {

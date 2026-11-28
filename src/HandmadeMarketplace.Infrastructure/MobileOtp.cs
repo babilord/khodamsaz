@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HandmadeMarketplace.Infrastructure;
 
-public enum OtpPurpose { Register, Login, VerifyPhone, RecoverPassword }
+public enum OtpPurpose { Register, Login, VerifyPhone, RecoverPassword, Access }
 public enum OtpIssue { Accepted, Wait }
 
 public sealed class SmsOptions
@@ -58,7 +58,7 @@ public sealed class MobileOtp(MarketplaceDb db, SmsOptions options, TimeProvider
     public static readonly TimeSpan Cooldown = TimeSpan.FromMinutes(1);
     public const int MaxAttempts = 5;
 
-    public async Task<(OtpIssue Status, Guid Id)> Issue(
+    public async Task<(OtpIssue Status, Guid Id, bool Delivered)> Issue(
         string phone, string ip, OtpPurpose purpose, string? binding, CancellationToken ct)
     {
         var challenges = db.MobileOtpChallenges;
@@ -91,13 +91,14 @@ public sealed class MobileOtp(MarketplaceDb db, SmsOptions options, TimeProvider
             await transaction.CommitAsync(token);
             return true;
         }, ct);
-        if (!accepted) return (OtpIssue.Wait, Guid.Empty);
+        if (!accepted) return (OtpIssue.Wait, Guid.Empty, false);
 
         // Delivery takes place after commit. Failed or ambiguous delivery never enables a code.
-        if (binding is not null && await sender.Send(phone, code, CancellationToken.None))
+        var delivered = binding is not null && await sender.Send(phone, code, CancellationToken.None);
+        if (delivered)
             await challenges.Where(x => x.Id == id && !x.Closed)
                 .ExecuteUpdateAsync(x => x.SetProperty(y => y.Delivered, true), CancellationToken.None);
-        return (OtpIssue.Accepted, id);
+        return (OtpIssue.Accepted, id, delivered);
     }
 
     public Task<bool> Verify(Guid id, string phone, OtpPurpose purpose, string? binding, string input, CancellationToken ct)

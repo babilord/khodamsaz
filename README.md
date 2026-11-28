@@ -89,3 +89,16 @@ After explicit approval for live activation, put the credentials, BodyId, genera
 Local verification uses a disposable PostgreSQL database, a generated hash key, and the Development fake. The PostgreSQL improvement suite exercises the full OTP journey. Start a disposable app with `Sms__Enabled=true`, `Sms__Fake=true`, and a generated `Sms__HashKey` to run `python tests/verify_mobile_otp.py http://localhost:5180`. Do not expose a fake inbox or persist test codes to a shared log.
 
 Before a disabled production rollout, test the additive migration on a restored database and keep the previous app image. Roll back the app image if needed and leave the additive schema in place. Rolling the migration down would discard verified mobile bindings.
+
+### Unified mobile access
+
+`/account/access` is the default account entry point. It issues the same challenge for any valid mobile number
+and selects login or registration only after verification. A protected, expiring registration cookie carries
+the verified number to the profile form. The verified-mobile unique index prevents concurrent account creation.
+Existing email/password login remains at `/Account/Login`. Phone verification and password recovery keep separate
+OTP purposes. New mobile accounts can omit both email and password. The Identity username is independent of the
+phone number, and the profile provides email and password management for eligible mobile accounts.
+
+For browser verification on a disposable fake-SMS fixture, provide the fixture's `Sms__HashKey` and local
+`AUTH_FIXTURE_PG` libpq connection. Set `AUTH_PSQL` when psql is outside PATH. The OTP browser check saves
+the four screens at each tested viewport in `test-results/auth`.

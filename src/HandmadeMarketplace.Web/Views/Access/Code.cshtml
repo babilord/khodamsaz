@@ -1,0 +1,29 @@
+@model AccessPage
+@{ ViewData["Title"] = "تأیید شماره موبایل"; }
+<section class="panel access-card" dir="rtl">
+    <a class="access-brand" asp-controller="Home" asp-action="Index">خودم‌ساز</a>
+    <h1>کد تأیید را وارد کنید</h1>
+    <p>کد ۶ رقمی به شماره موبایل شما ارسال شد.</p>
+    <div class="access-destination">
+        <bdi dir="ltr">@Model.Phone</bdi>
+        <a class="access-link" asp-action="Start" asp-route-returnUrl="@Model.ReturnUrl">ویرایش شماره موبایل</a>
+    </div>
+    <form asp-action="Verify" method="post" data-access-form>
+        <input type="hidden" name="state" value="@Model.State" />
+        <label for="access-code" class="form-label">کد شش‌رقمی</label>
+        <div class="access-code" dir="ltr">
+            <input id="access-code" name="code" class="form-control" dir="ltr" type="text" inputmode="numeric"
+                   autocomplete="one-time-code" maxlength="6" minlength="6" required autofocus />
+            <div class="access-cells" aria-hidden="true">
+                <span></span><span></span><span></span><span></span><span></span><span></span>
+            </div>
+        </div>
+        @if (Model.Error is not null) { <p class="access-error" role="alert">@Model.Error</p> }
+        <button class="btn btn-primary w-100 access-action" type="submit" data-busy="در حال تأیید…">تأیید و ادامه</button>
+    </form>
+    <form asp-action="Send" method="post" data-access-form>
+        <input type="hidden" name="state" value="@Model.State" />
+        <button class="btn access-link w-100" type="submit" data-resend="@Model.Cooldown" data-busy="در حال ارسال…">ارسال مجدد کد</button>
+    </form>
+</section>
+<script src="~/js/access.js" asp-append-version="true" defer></script>

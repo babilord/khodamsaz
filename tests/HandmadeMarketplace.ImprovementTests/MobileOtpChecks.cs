@@ -38,7 +38,7 @@ internal static class MobileOtpChecks
         builder.Services.AddSingleton<IOtpSmsSender>(s => s.GetRequiredService<DevelopmentSms>());
         builder.Services.AddScoped<MobileOtp>();
         builder.Services.AddDbContext<MarketplaceDb>(o => o.UseNpgsql(connection, n => n.EnableRetryOnFailure()));
-        builder.Services.AddIdentity<AppUser, IdentityRole>().AddEntityFrameworkStores<MarketplaceDb>().AddDefaultTokenProviders();
+        builder.Services.AddIdentity<AppUser, IdentityRole>().AddEntityFrameworkStores<MarketplaceDb>().AddDefaultTokenProviders().AddUserValidator<OptionalEmailValidator>();
         builder.Services.AddControllersWithViews(o => o.Filters.Add(new AutoValidateAntiforgeryTokenAttribute()))
             .AddApplicationPart(typeof(MobileAccountController).Assembly);
         await using var app = builder.Build();
@@ -117,7 +117,8 @@ internal static class MobileOtpChecks
         var mobilePassword = "Aa1!" + Guid.NewGuid().ToString("N");
         var newPassword = "Aa1!" + Guid.NewGuid().ToString("N");
         var email = "otp-fixture@example.test";
-        settings.PhoneDaily = settings.IpDaily = settings.PhoneHourly = settings.IpHourly = 10;
+        settings.PhoneDaily = settings.PhoneHourly = 10;
+        settings.IpDaily = settings.IpHourly = 100;
 
         async Task<HttpResponseMessage> Post(string path, string previousPage, params (string, string)[] fields)
         {
@@ -129,7 +130,8 @@ internal static class MobileOtpChecks
         async Task<(string Page, string Code)> Send(string purpose)
         {
             var path = "/account/mobile/" + purpose;
-            using var response = await Post(path + "/send", await client.GetStringAsync(path), ("Phone", journeyPhone));
+            var entry = purpose is "Register" or "Login" ? "/account/access" : path;
+            using var response = await Post(path + "/send", await client.GetStringAsync(entry), ("Phone", journeyPhone));
             var markup = await response.Content.ReadAsStringAsync();
             return (markup, fake.Take(journeyPhone) ?? "");
         }
@@ -177,6 +179,81 @@ internal static class MobileOtpChecks
         using var noToken = await client.PostAsync("/account/mobile/Login/send", new FormUrlEncodedContent(
             new Dictionary<string, string> { ["Phone"] = journeyPhone }));
         check(noToken.StatusCode == HttpStatusCode.BadRequest, "mobile writes require anti-forgery token");
+        const string accessPhone = "+989533456789";
+        const string optionalPhone = "+989633456789";
+        using var directProfile = await client.GetAsync("/account/access/profile");
+        check(directProfile.StatusCode == HttpStatusCode.Redirect, "profile completion requires a verified continuation");
+
+        async Task<(string Page, string State, string Code)> SendAccess(string number, string returnUrl)
+        {
+            using var response = await Post("/account/access/send", await client.GetStringAsync("/account/access"),
+                ("phone", number), ("returnUrl", returnUrl));
+            var markup = await response.Content.ReadAsStringAsync();
+            return (markup, Field(markup, "state"), fake.Take(number) ?? "");
+        }
+
+        var access = await SendAccess(accessPhone, "/Account/Profile");
+        check(access.State.Length > 0 && access.Code.Length == 6 && !access.Page.Contains("name=\"Email\""),
+            "unified OTP screen defers registration fields");
+        using var wrongAccess = await Post("/account/access/verify", access.Page, ("state", access.State),
+            ("code", access.Code == "123456" ? "234567" : "123456"));
+        check(wrongAccess.StatusCode == HttpStatusCode.OK, "unified access rejects incorrect OTP");
+        using var verifiedAccess = await Post("/account/access/verify", access.Page, ("state", access.State), ("code", access.Code));
+        check(verifiedAccess.Headers.Location?.OriginalString == "/account/access/profile", "new verified number enters profile completion");
+        var mobileProfile = await client.GetStringAsync("/account/access/profile");
+        var completions = await Task.WhenAll(
+            Post("/account/access/profile", mobileProfile, ("Name", "Mobile Fixture")),
+            Post("/account/access/profile", mobileProfile, ("Name", "Mobile Fixture")));
+        foreach (var completion in completions) completion.Dispose();
+        check(await db.Users.CountAsync(x => x.VerifiedMobile == accessPhone && x.Email == null && x.PasswordHash == null) == 1,
+            "concurrent passwordless completion creates exactly one account");
+        using var accessLogout = await Post("/Account/Logout", await client.GetStringAsync("/Account/Profile"));
+        clock.Advance(TimeSpan.FromMinutes(1));
+        access = await SendAccess(accessPhone, "/Account/Profile");
+        using var existing = await Post("/account/access/verify", access.Page, ("state", access.State), ("code", access.Code));
+        check(existing.Headers.Location?.OriginalString == "/Account/Profile", "existing mobile user returns to its local destination");
+        using var existingLogout = await Post("/Account/Logout", await client.GetStringAsync("/Account/Profile"));
+
+        var optional = await SendAccess(optionalPhone, "//example.test");
+        using var optionalVerify = await Post("/account/access/verify", optional.Page, ("state", optional.State), ("code", optional.Code));
+        var optionalEmail = "optional-otp@example.test";
+        using var optionalResult = await Post("/account/access/profile", await client.GetStringAsync("/account/access/profile"),
+            ("Name", "Optional Fixture"), ("Email", optionalEmail), ("Password", mobilePassword), ("Confirmation", mobilePassword));
+        check(optionalResult.Headers.Location?.OriginalString is ("/" or "/Home/Index") && await db.Users.AnyAsync(x =>
+            x.VerifiedMobile == optionalPhone && x.Email == optionalEmail && x.PasswordHash != null && !x.EmailConfirmed),
+            "optional email and password work and external return URLs are discarded");
+        using var optionalLogout = await Post("/Account/Logout", await client.GetStringAsync("/Account/Profile"));
+        using var passwordLogin = await Post("/Account/Login", await client.GetStringAsync("/Account/Login"),
+            ("Email", optionalEmail), ("Password", mobilePassword));
+        check(passwordLogin.StatusCode == HttpStatusCode.Redirect, "optional password works with existing Identity email sign-in");
+        using var passwordLogout = await Post("/Account/Logout", await client.GetStringAsync("/Account/Profile"));
+
+        var restricted = await SendAccess(journeyPhone, "/Admin");
+        check(restricted.Code.Length == 6, "unified issuance does not disclose locked-account eligibility");
+        clock.Advance(TimeSpan.FromMinutes(3));
+        using var expired = await Post("/account/access/verify", restricted.Page, ("state", restricted.State), ("code", restricted.Code));
+        check(expired.StatusCode == HttpStatusCode.OK, "expired unified OTP is rejected");
+        restricted = await SendAccess(journeyPhone, "/Admin");
+        using var restrictedResult = await Post("/account/access/verify", restricted.Page, ("state", restricted.State), ("code", restricted.Code));
+        check(restrictedResult.StatusCode == HttpStatusCode.OK && (await client.GetAsync("/Account/Profile")).StatusCode == HttpStatusCode.Redirect,
+            "a verified OTP cannot sign in a locked existing account");
+
+
+        const string linkPhone = "+989733456789";
+        const string linkEmail = "link-otp@example.test";
+        using var emailRegistration = await Post("/Account/Register", await client.GetStringAsync("/Account/Register"),
+            ("Name", "Link Fixture"), ("City", "Qazvin"), ("Email", linkEmail), ("Password", mobilePassword));
+        check(emailRegistration.StatusCode == HttpStatusCode.Redirect, "existing email registration flow works");
+        const string linkPath = "/account/mobile/VerifyPhone";
+        using var linkSend = await Post(linkPath + "/send", await client.GetStringAsync(linkPath), ("Phone", linkPhone));
+        var linkPage = await linkSend.Content.ReadAsStringAsync();
+        using var linkVerify = await Post(linkPath + "/verify", linkPage, ("Phone", linkPhone),
+            ("Challenge", Field(linkPage, "Challenge", true)), ("Code", fake.Take(linkPhone) ?? ""), ("Password", mobilePassword));
+        check(linkVerify.StatusCode == HttpStatusCode.Redirect && await db.Users.AnyAsync(x =>
+            x.Email == linkEmail && x.VerifiedMobile == linkPhone && x.PhoneNumberConfirmed), "email-only account can verify and link a phone");
+        using var linkLogout = await Post("/Account/Logout", await client.GetStringAsync("/Account/Profile"));
+
+
         settings.Enabled = false;
         check((await client.GetAsync("/account/mobile/Login")).StatusCode == HttpStatusCode.NotFound, "disabled SMS route is hidden");
         check(!(await client.GetStringAsync("/Account/Login")).Contains("/account/mobile/", StringComparison.OrdinalIgnoreCase),

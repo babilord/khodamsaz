@@ -6,3 +6,14 @@
 {
     <div class="auth-panel"><a asp-controller="MobileAccount" asp-action="Start" asp-route-purpose="VerifyPhone">تأیید شماره موبایل</a></div>
 }
+
+@inject Microsoft.AspNetCore.Identity.UserManager<HandmadeMarketplace.Infrastructure.AppUser> AccountUsers
+@{
+    var account = await AccountUsers.GetUserAsync(User);
+}
+@if (account is { PhoneNumberConfirmed: true, VerifiedMobile: not null }
+    && (await AccountUsers.GetRolesAsync(account)).Count == 0
+    && !await AccountUsers.GetTwoFactorEnabledAsync(account))
+{
+    <div class="auth-panel"><a asp-action="Credentials">مدیریت ایمیل و رمز عبور</a></div>
+}
